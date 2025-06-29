@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    {% include 'partials/_sidebar.html' %}
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">My Profile</h1>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-4">
+          <div class="card mb-4">
+            <div class="card-header bg-dark">
+              <h5 class="mb-0">Account Information</h5>
+            </div>
+            <div class="card-body text-center">
+              <img src="https://ui-avatars.com/api/?name={{ request.user.username }}&background=e50914&color=fff&size=150" 
+                   class="rounded-circle mb-3" alt="Avatar">
+              <h5>{{ request.user.get_full_name }}</h5>
+              <p class="text-muted">@{{ request.user.username }}</p>
+              
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item bg-transparent text-white d-flex justify-content-between">
+                  <span>Email</span>
+                  <span>{{ request.user.email }}</span>
+                </li>
+                <li class="list-group-item bg-transparent text-white d-flex justify-content-between">
+                  <span>Phone</span>
+                  <span>{{ request.user.phone|default:"Not set" }}</span>
+                </li>
+                <li class="list-group-item bg-transparent text-white d-flex justify-content-between">
+                  <span>Joined</span>
+                  <span>{{ request.user.date_joined|date:"M d, Y" }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-lg-8">
+          <div class="card mb-4">
+            <div class="card-header bg-dark">
+              <h5 class="mb-0">Security Settings</h5>
+            </div>
+            <div class="card-body">
+              <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                  <label class="form-label">Email Address</label>
+                  <input type="email" class="form-control" value="{{ request.user.email }}" disabled>
+                </div>
+                
+                <div class="mb-3">
+                  <label class="form-label">Phone Number</label>
+                  <input type="tel" class="form-control" name="phone" value="{{ request.user.phone|default:'' }}">
+                </div>
+                
+                <div class="mb-3">
+                  <label class="form-label">Change Password</label>
+                  <input type="password" class="form-control" name="new_password" placeholder="New password">
+                </div>
+                
+                <div class="mb-3">
+                  <label class="form-label">Current Password</label>
+                  <input type="password" class="form-control" name="current_password" 
+                         placeholder="Required for changes" required>
+                </div>
+                
+                <button type="submit" class="btn btn-danger">Update Profile</button>
+              </form>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header bg-dark text-danger">
+              <h5 class="mb-0">Danger Zone</h5>
+            </div>
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-1">Delete Account</h6>
+                  <p class="mb-0 text-muted">Permanently delete your account and all data</p>
+                </div>
+                <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                  Delete Account
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-danger">Confirm Account Deletion</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+        <p class="text-danger">All your wallet balances, transactions, and card submissions will be permanently deleted.</p>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'delete_account' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Delete My Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

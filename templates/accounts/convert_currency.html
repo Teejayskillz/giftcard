@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    {% include 'partials/_sidebar.html' %}
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Convert Currency</h1>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="card mb-4">
+            <div class="card-header bg-dark">
+              <h5 class="mb-0">Conversion Calculator</h5>
+            </div>
+            <div class="card-body">
+              <form method="post">
+                {% csrf_token %}
+                
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">From Currency</label>
+                    <select class="form-select" name="from_currency" id="fromCurrency" required>
+                      {% for wallet in wallets %}
+                      <option value="{{ wallet.currency.code }}" 
+                              data-balance="{{ wallet.balance }}"
+                              {% if wallet.currency.code == from_currency.code %}selected{% endif %}>
+                        {{ wallet.currency.name }} ({{ wallet.currency.symbol }}{{ wallet.balance|intcomma }})
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <small class="text-muted">Available: <span id="availableBalance">0</span></small>
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <label class="form-label">To Currency</label>
+                    <select class="form-select" name="to_currency" required>
+                      {% for currency in currencies %}
+                      {% if currency.code != from_currency.code %}
+                      <option value="{{ currency.code }}">{{ currency.name }} ({{ currency.code }})</option>
+                      {% endif %}
+                      {% endfor %}
+                    </select>
+                  </div>
+                  
+                  <div class="col-12">
+                    <label class="form-label">Amount to Convert</label>
+                    <div class="input-group">
+                      <span class="input-group-text">{{ from_currency.symbol }}</span>
+                      <input type="number" class="form-control" name="amount" 
+                             id="convertAmount" min="0.01" step="0.01" required>
+                      <button class="btn btn-outline-secondary" type="button" id="useMax">Max</button>
+                    </div>
+                  </div>
+                  
+                  <div class="col-12">
+                    <div class="card bg-black mt-3">
+                      <div class="card-body text-center">
+                        <h6 class="card-subtitle mb-2 text-muted">Estimated Conversion</h6>
+                        <h3 class="card-title" id="conversionResult">-</h3>
+                        <p class="text-muted" id="exchangeRateInfo">Rate: -</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-12">
+                    <button type="submit" class="btn btn-danger w-100 py-2">Convert Currency</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-header bg-dark">
+              <h5 class="mb-0">Conversion Rates</h5>
+            </div>
+            <div class="card-body">
+              <ul class="list-group list-group-flush">
+                {% for rate in exchange_rates %}
+                <li class="list-group-item bg-transparent text-white d-flex justify-content-between">
+                  <span>1 {{ rate.from_currency.code }}</span>
+                  <span>= {{ rate.rate }} {{ rate.to_currency.code }}</span>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const fromCurrency = document.getElementById('fromCurrency');
+  const convertAmount = document.getElementById('convertAmount');
+  const useMax = document.getElementById('useMax');
+  const availableBalance = document.getElementById('availableBalance');
+  const conversionResult = document.getElementById('conversionResult');
+  const exchangeRateInfo = document.getElementById('exchangeRateInfo');
+  
+  // Set initial available balance
+  updateAvailableBalance();
+  
+  // Use max balance
+  useMax.addEventListener('click', function() {
+    const balance = parseFloat(fromCurrency.selectedOptions[0].dataset.balance);
+    convertAmount.value = balance.toFixed(2);
+    calculateConversion();
+  });
+  
+  // Update when currency changes
+  fromCurrency.addEventListener('change', updateAvailableBalance);
+  
+  // Calculate conversion when amount changes
+  convertAmount.addEventListener('input', calculateConversion);
+  
+  function updateAvailableBalance() {
+    const balance = parseFloat(fromCurrency.selectedOptions[0].dataset.balance);
+    availableBalance.textContent = fromCurrency.selectedOptions[0].dataset.balance;
+    convertAmount.max = balance;
+  }
+  
+  function calculateConversion() {
+    // In a real app, you would fetch rates from an API endpoint
+    const amount = parseFloat(convertAmount.value) || 0;
+    if (amount > 0) {
+      // Mock calculation - replace with actual API call
+      const rate = 0.0023; // Example rate
+      conversionResult.textContent = (amount * rate).toFixed(2) + ' BTC';
+      exchangeRateInfo.textContent = `Rate: 1 ${fromCurrency.value} = ${rate} BTC`;
+    }
+  }
+});
+</script>
+{% endblock %}

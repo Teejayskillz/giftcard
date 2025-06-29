@@ -1,0 +1,69 @@
+<!-- templates/accounts/wallet_dashboard.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">Your Wallets</h2>
+    
+    <div class="row">
+        {% for wallet in wallets %}
+        <div class="col-md-4 mb-4">
+            <div class="card {% if wallet.currency.code == 'NGN' %}border-danger{% endif %}">
+                <div class="card-header bg-dark">
+                    <h5>{{ wallet.currency.name }} Wallet</h5>
+                </div>
+                <div class="card-body">
+                    <h3>{{ wallet.currency.symbol }}{{ wallet.balance|floatformat:2 }}</h3>
+                    <p class="text-muted">{{ wallet.currency.code }}</p>
+                    
+                    {% if wallet.currency.code != 'NGN' %}
+                    <p>≈ ₦{{ wallet.balance|multiply:wallet.currency.exchange_rate|floatformat:2 }}</p>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2 mt-3">
+                        <a href="#" class="btn btn-sm btn-outline-light">Withdraw</a>
+                        <a href="#" class="btn btn-sm btn-danger">Convert</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <h3 class="mt-5 mb-3">Recent Transactions</h3>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td>{{ tx.created_at|date:"M d, Y" }}</td>
+                    <td>{{ tx.get_transaction_type_display }}</td>
+                    <td class="{% if tx.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ tx.wallet.currency.symbol }}{{ tx.amount|abs|floatformat:2 }}
+                    </td>
+                    <td>{{ tx.description }}</td>
+                    <td>
+                        <span class="badge bg-{% if tx.status == 'completed' %}success{% else %}warning{% endif %}">
+                            {{ tx.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No transactions yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

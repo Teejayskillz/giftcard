@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    {% include 'partials/_sidebar.html' %}
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Verify Withdrawal</h1>
+      </div>
+
+      <div class="row justify-content-center">
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header bg-dark">
+              <h5 class="mb-0">Verification Required</h5>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info">
+                <i class="bi bi-envelope-check me-2"></i>
+                We've sent a 6-digit verification code to <strong>{{ request.user.email }}</strong>.
+                Please enter it below to confirm your withdrawal request.
+              </div>
+              
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h6 class="card-title">Withdrawal Details</h6>
+                  <p class="mb-1">
+                    <span class="text-danger">{{ withdrawal.amount }}{{ withdrawal.wallet.currency.symbol }}</span>
+                    from {{ withdrawal.wallet.currency.name }} Wallet
+                  </p>
+                  <small class="text-muted">Request ID: {{ withdrawal.id }}</small>
+                </div>
+              </div>
+
+              <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                  <label class="form-label">Verification Code</label>
+                  <input type="text" class="form-control text-center fw-bold letter-spacing" 
+                         name="code" maxlength="6" required style="font-size: 1.5rem; letter-spacing: 0.5em;">
+                </div>
+                
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-danger py-2">Confirm Withdrawal</button>
+                  <a href="#" class="btn btn-outline-secondary">Resend Code</a>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+.letter-spacing {
+  padding-left: 0.5em; /* Adjust letter spacing padding */
+}
+</style>
+{% endblock %}

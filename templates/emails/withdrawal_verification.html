@@ -1,0 +1,14 @@
+<!-- templates/emails/withdrawal_verification.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Withdrawal Verification</title>
+</head>
+<body>
+    <h2>Withdrawal Verification Code</h2>
+    <p>You requested to withdraw {{ amount }}{{ currency_symbol }} from your account.</p>
+    <p>Your verification code is: <strong>{{ code }}</strong></p>
+    <p>This code will expire in 30 minutes.</p>
+    <p>If you didn't request this, please contact support immediately.</p>
+</body>
+</html>

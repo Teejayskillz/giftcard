@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    {% include 'partials/_sidebar.html' %}
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Request Withdrawal</h1>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="card mb-4">
+            <div class="card-header bg-dark">
+              <h5 class="mb-0">Withdrawal Details</h5>
+            </div>
+            <div class="card-body">
+              {% if form.errors %}
+              <div class="alert alert-danger">
+                Please correct the errors below
+              </div>
+              {% endif %}
+
+              <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                  <label class="form-label">Select Wallet</label>
+                  <select class="form-select" name="wallet" required>
+                    {% for wallet in wallets %}
+                    <option value="{{ wallet.id }}" {% if wallet.id == selected_wallet.id %}selected{% endif %}>
+                      {{ wallet.currency.name }} ({{ wallet.currency.symbol }}{{ wallet.balance|intcomma }})
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                
+                <div class="mb-3">
+                  <label class="form-label">Amount</label>
+                  <div class="input-group">
+                    <span class="input-group-text">{{ selected_wallet.currency.symbol }}</span>
+                    <input type="number" class="form-control" name="amount" 
+                           min="0.01" max="{{ selected_wallet.balance }}" step="0.01" required>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label class="form-label">Withdrawal Method</label>
+                  <select class="form-select" name="method" id="withdrawalMethod" required>
+                    <option value="bank">Bank Transfer</option>
+                    <option value="crypto">Cryptocurrency</option>
+                  </select>
+                </div>
+                
+                <!-- Bank Details -->
+                <div id="bankDetails">
+                  <div class="mb-3">
+                    <label class="form-label">Bank Name</label>
+                    <input type="text" class="form-control" name="bank_name" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Account Number</label>
+                    <input type="text" class="form-control" name="account_number" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Account Name</label>
+                    <input type="text" class="form-control" name="account_name" required>
+                  </div>
+                </div>
+                
+                <!-- Crypto Details -->
+                <div id="cryptoDetails" style="display: none;">
+                  <div class="mb-3">
+                    <label class="form-label">Cryptocurrency</label>
+                    <select class="form-select" name="crypto_type" required>
+                      <option value="BTC">Bitcoin (BTC)</option>
+                      <option value="ETH">Ethereum (ETH)</option>
+                      <option value="USDT">USDT (TRC20)</option>
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Wallet Address</label>
+                    <input type="text" class="form-control" name="wallet_address" required>
+                  </div>
+                </div>
+                
+                <button type="submit" class="btn btn-danger w-100 py-2">Request Withdrawal</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-header bg-dark">
+              <h5 class="mb-0">Withdrawal Limits</h5>
+            </div>
+            <div class="card-body">
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item bg-transparent text-white">
+                  <i class="bi bi-currency-exchange me-2"></i>
+                  Minimum: ₦5,000
+                </li>
+                <li class="list-group-item bg-transparent text-white">
+                  <i class="bi bi-clock-history me-2"></i>
+                  Processing Time: 1-24 hours
+                </li>
+                <li class="list-group-item bg-transparent text-white">
+                  <i class="bi bi-shield-lock me-2"></i>
+                  Requires email verification
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+document.getElementById('withdrawalMethod').addEventListener('change', function() {
+  const method = this.value;
+  document.getElementById('bankDetails').style.display = method === 'bank' ? 'block' : 'none';
+  document.getElementById('cryptoDetails').style.display = method === 'crypto' ? 'block' : 'none';
+  
+  // Update required fields
+  const bankFields = document.querySelectorAll('#bankDetails input');
+  const cryptoFields = document.querySelectorAll('#cryptoDetails input');
+  
+  if (method === 'bank') {
+    bankFields.forEach(field => field.required = true);
+    cryptoFields.forEach(field => field.required = false);
+  } else {
+    bankFields.forEach(field => field.required = false);
+    cryptoFields.forEach(field => field.required = true);
+  }
+});
+</script>
+{% endblock %}

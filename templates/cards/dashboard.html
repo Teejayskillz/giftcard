@@ -1,0 +1,66 @@
+<!-- templates/cards/dashboard.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-dark">
+                    <h4>Account Balance</h4>
+                </div>
+                <div class="card-body text-center">
+                    <h2>₦{{ balance|floatformat:2 }}</h2>
+                    <a href="{% url 'cards:withdraw' %}" class="btn btn-danger mt-3">Withdraw Funds</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Your Submissions</h4>
+                    <a href="{% url 'cards:submit' %}" class="btn btn-sm btn-danger">Sell New Card</a>
+                </div>
+                
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Card</th>
+                                    <th>Type</th>
+                                    <th>Value</th>
+                                    <th>Offer</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sub in submissions %}
+                                <tr>
+                                    <td>{{ sub.date_submitted|date:"M d, Y" }}</td>
+                                    <td>{{ sub.card.name }}</td>
+                                    <td>{{ sub.get_card_type_display }}</td>
+                                    <td>${{ sub.card_value }}</td>
+                                    <td>₦{{ sub.offer_amount|floatformat:2 }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if sub.status == 'paid' %}success{% elif sub.status == 'rejected' %}danger{% else %}warning{% endif %}">
+                                            {{ sub.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No submissions yet</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,374 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{# REMOVED: {% load cards_extras %} #}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-dark">
+                    <h3 class="mb-0">Sell Your Gift Card</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        {# NEW: Display non-field errors at the top of the form #}
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger mb-3">
+                            {% for error in form.non_field_errors %}
+                            <p class="mb-0">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Select Card Type</label>
+                            {% render_field form.card class="form-select" %}
+                            {% for error in form.card.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Country</label>
+                            {% render_field form.country class="form-select" %}
+                            <div id="countryLoading" class="spinner-border spinner-border-sm text-danger" role="status" style="display: none;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div id="countryError" class="alert alert-danger mt-3" style="display: none;"></div>
+                            {% for error in form.country.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Card Format (e.g., Physical/E-Code)</label>
+                            {% render_field form.card_type class="form-select" id="id_card_type" %}
+                            {% for error in form.card_type.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Card Value ($)</label>
+                            {% render_field form.card_value class="form-control" %}
+                            {% for error in form.card_value.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Card Number</label>
+                            {% render_field form.card_number class="form-control" %}
+                            {% for error in form.card_number.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3" id="card-pin-group">
+                            <label class="form-label">Card PIN (if any)</label>
+                            {% render_field form.card_pin class="form-control" %}
+                            {# Assuming card_pin is also a field in your form #}
+                            {% for error in form.card_pin.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-4" id="card-image-group">
+                            <label class="form-label">Upload Card Image</label>
+                            {% render_field form.card_image class="form-control" %}
+                            {% for error in form.card_image.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4"> 
+                            <div id="offer-display">
+                                </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-danger w-100 py-3">Get Offer</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4 shadow">
+                <div class="card-header bg-dark">
+                    <h4 class="mb-0">Current Rates</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Card</th>
+                                    <th>Value Range ($)</th>
+                                    <th>Rate (₦/$)</th>
+                                    <th>Example</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rate in rate_table %}
+                                <tr>
+                                    <td>{{ rate.card.name }}</td>
+                                    <td>${{ rate.min_value }} - ${{ rate.max_value }}</td>
+                                    <td>₦{{ rate.rate_per_unit|floatformat:2 }}</td> {# Floatformat for rate itself if desired #}
+                                    {# UPDATED LINE: Now expecting 'example_offer' directly on the rate object #}
+                                    <td>${{ rate.min_value }} → ₦{{ rate.example_offer|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cardSelect = document.getElementById('id_card');
+    const countrySelect = document.getElementById('id_country'); 
+    const cardTypeSelect = document.getElementById('id_card_type'); 
+    const cardValueInput = document.getElementById('id_card_value');
+    const offerDisplay = document.getElementById('offer-display');
+    const cardImageGroup = document.getElementById('card-image-group'); 
+    const cardPinGroup = document.getElementById('id_card_pin').closest('.mb-3'); // Corrected to get parent div     
+
+    const countryLoadingSpinner = document.getElementById('countryLoading');
+    const countryErrorDiv = document.getElementById('countryError');
+
+    const fallbackCountries = [
+        {id: 1, name: 'United States', code: 'US', currency__symbol: '$'},
+        {id: 2, name: 'United Kingdom', code: 'UK', currency__symbol: '£'},
+        {id: 3, name: 'Germany', code: 'DE', currency__symbol: '€'}
+    ];
+    
+    // Helper function to format decimals
+    function formatDecimal(value) {
+        // Ensure proper decimal formatting
+        return parseFloat(value).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function populateCountriesForCard() {
+        const cardId = cardSelect.value;
+        
+        countrySelect.innerHTML = '<option value="">Select Country</option>';
+        countryErrorDiv.style.display = 'none';
+
+        if (cardId) {
+            countryLoadingSpinner.style.display = 'inline-block';
+            fetch(`/cards/api/card-countries/?card_id=${cardId}`)
+                .then(response => {
+                    countryLoadingSpinner.style.display = 'none';
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    let countriesToDisplay = [];
+                    if (data.countries && data.countries.length > 0) {
+                        countriesToDisplay = data.countries;
+                    } else {
+                        console.warn("API returned no countries. Using fallback.");
+                        countriesToDisplay = fallbackCountries; 
+                    }
+
+                    if (countriesToDisplay.length > 0) {
+                        countriesToDisplay.forEach(country => {
+                            const option = document.createElement('option');
+                            option.value = country.id;
+                            option.textContent = `${country.name} (${country.currency__symbol})`; 
+                            countrySelect.appendChild(option);
+                        });
+                        // Automatically select the first country if available, or the one from previously selected form data
+                        if (countrySelect.options.length > 1) {
+                            // If there's an initial value from the form (e.g., after an invalid submission)
+                            // try to restore it, otherwise default to the first in the list.
+                            const currentCountryValue = countrySelect.getAttribute('data-initial-value');
+                            if (currentCountryValue && countrySelect.querySelector(`option[value="${currentCountryValue}"]`)) {
+                                countrySelect.value = currentCountryValue;
+                            } else {
+                                countrySelect.value = countrySelect.options[1].value;
+                            }
+                        }
+                    } else {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'No countries available';
+                        option.disabled = true;
+                        countrySelect.appendChild(option);
+                    }
+                    
+                    calculateOffer(); 
+                })
+                .catch(error => {
+                    console.error('Error fetching countries:', error);
+                    countryLoadingSpinner.style.display = 'none';
+                    countryErrorDiv.textContent = 'Failed to load countries. Please try again.';
+                    countryErrorDiv.style.display = 'block';
+                    offerDisplay.innerHTML = ''; 
+                });
+        } else {
+            countryLoadingSpinner.style.display = 'none';
+            offerDisplay.innerHTML = '';
+        }
+    }
+    
+    function calculateOffer() {
+        const cardId = cardSelect.value;
+        const countryId = countrySelect.value; 
+        const cardType = cardTypeSelect.value; 
+        const cardValue = cardValueInput.value; 
+
+        offerDisplay.innerHTML = ''; 
+        if (!cardId || !countryId || !cardType || !cardValue.trim()) { 
+            offerDisplay.innerHTML = `
+                <div class="alert alert-info mt-3">
+                    Select card, country, format, and enter a valid value to get an offer.
+                </div>
+            `;
+            return; 
+        }
+
+        offerDisplay.innerHTML = '<div class="alert alert-info mt-3">Calculating offer...</div>';
+        
+        fetch(`/cards/api/calculate-offer/?card=${cardId}&country=${countryId}&type=${cardType}&value=${cardValue}`)
+            .then(response => response.json()) 
+            .then(data => {
+                switch(data.status) {
+                    case 'success':
+                        offerDisplay.innerHTML = `
+                            <div class="alert alert-success mt-3">
+                                <h4>Your Offer: ${data.currency_symbol}${formatDecimal(data.offer)}</h4>
+                                <p>Rate: ${data.currency_symbol}${formatDecimal(data.rate)} per unit</p>
+                                <p>${data.card_value}${data.currency_symbol} → ${data.currency_symbol}${formatDecimal(data.offer)}</p>
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'no_rate':
+                        offerDisplay.innerHTML = `
+                            <div class="alert alert-warning mt-3">
+                                <h4>No Rate Available</h4>
+                                <p>${data.message}</p>
+                                <p>Please try a different amount or contact support.</p>
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'missing_input':
+                    case 'invalid_value':
+                        offerDisplay.innerHTML = `
+                            <div class="alert alert-info mt-3">
+                                ${data.message}
+                            </div>
+                        `;
+                        break;
+                        
+                    default: 
+                        offerDisplay.innerHTML = `
+                            <div class="alert alert-danger mt-3">
+                                <h4>Calculation Error</h4>
+                                <p>${data.message || 'An unknown error occurred.'}</p>
+                                <button onclick="calculateOffer()" class="btn btn-sm btn-outline-light mt-2">
+                                    Try Again
+                                </button>
+                            </div>
+                        `;
+                }
+            })
+            .catch(error => {
+                console.error('Network or parsing error:', error);
+                offerDisplay.innerHTML = `
+                    <div class="alert alert-danger mt-3">
+                        <h4>Network Error</h4>
+                        <p>Failed to connect to server or parse response. <small>${error.message}</small></p>
+                        <button onclick="calculateOffer()" class="btn btn-sm btn-outline-light mt-2">
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            });
+    }
+
+    function toggleFields() {
+        // Implement logic to show/hide card image/pin fields based on card type.
+        // Example: if (cardTypeSelect.value === 'e_code') { cardImageGroup.style.display = 'none'; cardPinGroup.style.display = 'none'; }
+        // Otherwise, make them visible.
+        cardImageGroup.style.display = 'block'; 
+        cardPinGroup.style.display = 'block';   
+    }
+    
+    // --- Event Listeners ---
+    cardSelect.addEventListener('change', function() {
+        populateCountriesForCard(); 
+        toggleFields();             
+    });
+    
+    countrySelect.addEventListener('change', calculateOffer); 
+    cardTypeSelect.addEventListener('change', calculateOffer); 
+
+    cardValueInput.addEventListener('input', function() {
+        // Only trigger calculateOffer if a valid-looking number is being typed,
+        // or if the input is cleared to show the 'info' message.
+        if (this.value.trim() !== '' && !isNaN(parseFloat(this.value.trim()))) { 
+            calculateOffer();
+        } else if (this.value.trim() === '') {
+            offerDisplay.innerHTML = `
+                <div class="alert alert-info mt-3">
+                    Select card, country, format, and enter a valid value to get an offer.
+                </div>
+            `;
+        }
+    });
+
+    // Form submission handler
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const successOffer = offerDisplay.querySelector('.alert-success');
+        
+        if (!successOffer) {
+            e.preventDefault(); // Stop the form from submitting
+            
+            // Only add the error message if one isn't already present
+            if (!offerDisplay.querySelector('.alert-danger')) {
+                offerDisplay.innerHTML = `
+                    <div class="alert alert-danger mt-3">
+                        Please wait for a valid offer before submitting.
+                    </div>
+                `;
+            }
+            
+            // Try to calculate if all required fields are filled to re-trigger the offer flow
+            const cardId = cardSelect.value;
+            const countryId = countrySelect.value;
+            const cardType = cardTypeSelect.value;
+            const cardValue = cardValueInput.value;
+            
+            if (cardId && countryId && cardType && cardValue.trim()) {
+                calculateOffer();
+            }
+        }
+    });
+
+    // --- Initial Setup on Page Load ---
+    // Store initial country value if present (e.g., after an invalid submission)
+    const initialCountryValue = "{{ form.country.value }}";
+    if (initialCountryValue) {
+        countrySelect.setAttribute('data-initial-value', initialCountryValue);
+    }
+    
+    populateCountriesForCard(); 
+    toggleFields();             
+});
+</script>
+{% endblock %}

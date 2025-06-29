@@ -1,0 +1,42 @@
+<!-- templates/admin/notifications.html -->
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="module">
+  <h2>Pending Notifications</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Details</th>
+        <th>Time</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for notification in notifications %}
+      <tr class="{% if not notification.is_read %}unread{% endif %}">
+        <td>{{ notification.get_notification_type_display }}</td>
+        <td>
+          {% if notification.withdrawal_request %}
+          <a href="{% url 'admin:accounts_withdrawalrequest_change' notification.withdrawal_request.id %}">
+            {{ notification.message }}
+          </a>
+          {% else %}
+          {{ notification.message }}
+          {% endif %}
+        </td>
+        <td>{{ notification.created_at|timesince }} ago</td>
+        <td>
+          <a href="{% url 'admin:accounts_adminnotification_change' notification.id %}" class="button">View</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4">No pending notifications</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
